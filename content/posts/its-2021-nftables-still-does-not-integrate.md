@@ -6,10 +6,10 @@ draft: false
 ---
 
 You probably have [seen it around][nftables-wiki] somewhere already, for example [Debian trying hard to replace iptables][debian-netfilter] with it.  
-Debian 10 (buster) shipped with it already, [Arch Linux wiki][arch-nftables] provided (usable) examples for the adventurous back in 2014 etc
+Debian 10 (buster) shipped with it already, [Arch Linux wiki][arch-nftables] provided (usable) examples for the adventurous back in 2014 etc.
 
-nftables is quite promising, don't get me wrong - I quite like it, because how much easier it is to use and integrate. This is rather a rant towards
-other projects.
+(nftables is quite promising, don't get me wrong - I quite like it, because how much easier it is to use and integrate. This is rather a rant towards
+other projects.)
 
 HOWEVER, integrating it into existing solutions turns out to be VERY painful:
 1) [Docker does not support it][docker-nftables-issue] - issue is still open

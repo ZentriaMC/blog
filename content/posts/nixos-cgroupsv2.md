@@ -163,7 +163,7 @@ After moderate build time, I'll see Docker successfully being restarted. Now I h
 
 Running `sudo docker run --rm -ti alpine:latest /bin/sh -c "echo it works"` to confirm. If you see `it works`, then obviously, it works.
 
-** Exploring the gains
+## Exploring the gains
 
 Now starting e.g nginx (`docker run -d -p 8080:80 nginx:latest`) and doing `systemd-cgls`, I can see nginx running in its own scope instead of being
 under `docker.service`.
