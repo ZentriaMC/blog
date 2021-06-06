@@ -10,10 +10,13 @@ draft: false
 ## Story time? Story time.
 
 I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect
-to a PostgreSQL database and Redis running on the container host (which was quite a mission on its own unfortunately), implying no magical DNS solutions
-(I think Docker on Linux still does not have this `host.docker.internal` DNS address set up). It also bound whole `/var/run` into the container to access
-Docker socket (it's still sitting at `/var/run/docker.sock` at the time of writing. Also binding socket file directly breaks Docker's live-restore functionality,
-as socket file has to be recreated, thus breaking orchestrator's access to Docker API)
+to a PostgreSQL database and Redis running on the container host, implying no magical DNS solutions nor any convenience at all
+(manual /24 subnet configuration and firewalling). [^1]
+
+It also bound whole `/var/run` into the container to access Docker API socket (it's still sitting at `/var/run/docker.sock` at the time of writing).
+Binding only the socket file breaks with Docker's [live restore](https://docs.docker.com/config/containers/live-restore/) functionality, as socket file has to be recreated on restart, thus breaking orchestrator's access to the Docker API.
+
+## How the all hell broke loose
 
 One day I got annoyed because how often and unnecessarily NixOS decides to restart crucial services, bringing down the database, Redis etc.; so I
 decided to move all needed services into Docker and call it a day.
@@ -26,7 +29,8 @@ I checked if container name aliases weren't missing, using `docker inspect`. Res
 ## How DNS works on Linux
 
 For DNS, all programs usually end up calling [`gethostbyname(3)`](https://man7.org/linux/man-pages/man3/gethostbyname_r.3.html). That'll go through
-`/etc/hosts`, then hops into `/etc/resolv.conf` etc. depending on your `/etc/nsswitch.conf` configuration (if you are using [glibc](https://www.gnu.org/software/libc/)).
+`/etc/hosts`, then hops into `/etc/resolv.conf` etc. depending on your `/etc/nsswitch.conf` configuration (if you are using [glibc](https://www.gnu.org/software/libc/)).  
+It's usually hidden into implementation details how this all works.
 
 ## Let the digging begin
 
@@ -77,7 +81,7 @@ main(int argc, char **argv) {
 echo -e '#include<stdio.h>\n#include<arpa/inet.h>\n#include<netdb.h>\nmain(int argc,char **argv){struct hostent *lh=gethostbyname(argv[1]); printf("res: %s\\n",(lh?inet_ntoa(*((struct in_addr*)lh->h_addr_list[0])):"(failed)"));}' | gcc -x c - -o /dns
 ```
 
-Compiled and ran it on Ubuntu container, I saw this: [^1]
+Compiled and ran it on Ubuntu container, I saw this: [^2]
 
 ```strace
 stat("/etc/resolv.conf", {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
@@ -148,6 +152,7 @@ to set up an authorization plugin to apply limits to the API - making Docker API
 
 ## TL;DR
 
-Do not mount `/var/run` into container's `/var/run` blindly - especially if you have nscd running on host.
+Linux DNS is not broken. Do not mount `/var/run` into container's `/var/run` blindly - especially if you have `nscd` running on host.
 
-[^1]: Well this `strace` output is from my current NixOS installation. Only had poor quality pictures around from the real environment.
+[^1]: I think Docker on Linux still does not have this `host.docker.internal` DNS address set up.
+[^2]: Well this `strace` output is from my current NixOS installation. Only had poor quality pictures around from the real environment.
