@@ -26,7 +26,7 @@ I checked if container name aliases weren't missing, using `docker inspect`. Res
 ## How DNS works on Linux
 
 For DNS, all programs usually end up calling [`gethostbyname(3)`](https://man7.org/linux/man-pages/man3/gethostbyname_r.3.html). That'll go through
-/etc/hosts, then hops into /etc/resolv.conf etc. depending on your /etc/nsswitch.conf configuration (if you are using `glibc`).
+`/etc/hosts`, then hops into `/etc/resolv.conf` etc. depending on your `/etc/nsswitch.conf` configuration (if you are using [glibc](https://www.gnu.org/software/libc/)).
 
 ## Let the digging begin
 
@@ -77,7 +77,7 @@ main(int argc, char **argv) {
 echo -e '#include<stdio.h>\n#include<arpa/inet.h>\n#include<netdb.h>\nmain(int argc,char **argv){struct hostent *lh=gethostbyname(argv[1]); printf("res: %s\\n",(lh?inet_ntoa(*((struct in_addr*)lh->h_addr_list[0])):"(failed)"));}' | gcc -x c - -o /dns
 ```
 
-Compiled and ran it on Ubuntu container, I saw this:
+Compiled and ran it on Ubuntu container, I saw this: [^1]
 
 ```strace
 stat("/etc/resolv.conf", {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
@@ -88,9 +88,9 @@ read(3, "", 4096)                       = 0
 close(3)                                = 0
 openat(AT_FDCWD, "/etc/resolv.conf", O_RDONLY|O_CLOEXEC) = 3
 fstat(3, {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
-read(3, "nameserver 127.0.0.1\nnameserver "..., 4096) = 36
+read(3, "nameserver 127.0.0.11\nnameserver "..., 4096) = 36
 read(3, "", 4096)                       = 0
-uname({sysname="Linux", nodename="nixos", ...}) = 0
+uname({sysname="Linux", nodename="89e72f443fc3", ...}) = 0
 fstat(3, {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
 close(3)                                = 0
 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 3
@@ -114,7 +114,7 @@ exit_group(0)                           = ?
 +++ exited with 0 +++
 ```
 
-wait wait wait... it's consulting with [NSCD](https://linux.die.net/man/8/nscd) over `/var/run/nscd/socket`, instead of reading `/etc/resol.conf` and doing DNS query on its own! No wonder why DNS worked properly on Alpine / musl libc.
+wait wait wait... it's consulting with [NSCD](https://linux.die.net/man/8/nscd) over `/var/run/nscd/socket`, instead of reading `/etc/resolv.conf` and doing DNS query on its own! No wonder why DNS worked properly on Alpine / musl libc.
 
 This container has been sending DNS queries to the host all the time, host will never be aware of container-specific internal DNS.
 
@@ -149,3 +149,5 @@ to set up an authorization plugin to apply limits to the API - making Docker API
 ## TL;DR
 
 Do not mount `/var/run` into container's `/var/run` blindly - especially if you have nscd running on host.
+
+[^1]: Well this `strace` output is from my current NixOS installation. Only had poor quality pictures around from the real environment.
