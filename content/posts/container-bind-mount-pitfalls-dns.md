@@ -5,7 +5,7 @@ date: 2021-06-06T19:56:22+03:00
 draft: false
 ---
 
-{{< figure src="https://ipfs.zentria.ee/ipfs/QmNtamk1FEKV9RNajAZrhsqh6S7KzjVj7nn6eGMHjvZNyB" alt="DNS Haiku" title="It's not DNS. There's no way it's DNS. It was DNS." >}}
+{{< figure src="https://ipfs.zentria.ee/ipfs/bafybeig2khivhboadxsyrj65dy2llxutnqkjnydp7ivdzeyub6k6mdeeai" alt="DNS Haiku" title="It's not DNS. There's no way it's DNS. It was DNS." >}}
 
 ## Story time? Story time.
 
