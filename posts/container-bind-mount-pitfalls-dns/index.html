@@ -1,17 +1,75 @@
-<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Container bind mount pitfalls: DNS &#183; Zentria Blog</title><link rel=stylesheet href=/css/style.css><link rel=stylesheet href=/css/fonts.css><link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png><link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png><link href rel=alternate type=application/rss+xml title="Zentria Blog"></head><body><nav class=nav><div class=nav-container><a href=/><h2 class=nav-title>Zentria Blog</h2></a><ul></ul></div></nav><main><div class=post><div class=post-info><span>Written by</span>
-Mark V.<br><span>on&nbsp;</span><time datetime="2021-06-06 19:56:22 +0300 +0300">June 6, 2021</time></div><h1 class=post-title>Container bind mount pitfalls: DNS</h1><div class=post-line></div><figure><img src=https://ipfs.zentria.ee/ipfs/bafybeig2khivhboadxsyrj65dy2llxutnqkjnydp7ivdzeyub6k6mdeeai alt="DNS Haiku"><figcaption><h4>It's not DNS. There's no way it's DNS. It was DNS.</h4></figcaption></figure><h2 id=story-time-story-time>Story time? Story time.</h2><p>I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect
+<!doctype html><html lang=en-us>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Container bind mount pitfalls: DNS &#183; Zentria Blog</title>
+<link rel=stylesheet href=/css/style.css>
+<link rel=stylesheet href=/css/fonts.css>
+<link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
+<link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
+<link href rel=alternate type=application/rss+xml title="Zentria Blog">
+</head>
+<body>
+<nav class=nav>
+<div class=nav-container>
+<a href=/>
+<h2 class=nav-title>Zentria Blog</h2>
+</a>
+<ul>
+</ul>
+</div>
+</nav>
+<main>
+<div class=post>
+<div class=post-info>
+<span>Written by</span>
+Mark V.
+<br>
+<span>on&nbsp;</span><time datetime="2021-06-06 19:56:22 +0300 +0300">June 6, 2021</time>
+</div>
+<h1 class=post-title>Container bind mount pitfalls: DNS</h1>
+<div class=post-line></div>
+<figure><img src=https://ipfs.zentria.ee/ipfs/bafybeig2khivhboadxsyrj65dy2llxutnqkjnydp7ivdzeyub6k6mdeeai alt="DNS Haiku"><figcaption>
+<h4>It's not DNS. There's no way it's DNS. It was DNS.</h4>
+</figcaption>
+</figure>
+<h2 id=story-time-story-time>Story time? Story time.</h2>
+<p>I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect
 to a PostgreSQL database and Redis running on the container host, implying no magical DNS solutions nor any convenience at all
-(manual /24 subnet configuration and firewalling). <sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup></p><p>It also bound whole <code>/var/run</code> into the container to access Docker API socket (it&rsquo;s still sitting at <code>/var/run/docker.sock</code> at the time of writing).
-Binding only the socket file breaks with Docker&rsquo;s <a href=https://docs.docker.com/config/containers/live-restore/>live restore</a> functionality, as socket file has to be recreated on restart, thus breaking orchestrator&rsquo;s access to the Docker API.</p><h2 id=how-the-all-hell-broke-loose>How the all hell broke loose</h2><p>One day I got annoyed because how often and unnecessarily NixOS decides to restart crucial services, bringing down the database, Redis etc.; so I
-decided to move all needed services into Docker and call it a day.</p><p>15 minutes into moving data and partially rewiring everything inside <code>docker-compose.yml</code>, I ended up with a very bizarre issue:
-Clojure app is unable to resolve anything; no database, Redis, nothing. Internal DNS was completely broken.</p><p>I checked if container name aliases weren&rsquo;t missing, using <code>docker inspect</code>. Resolving e.g <code>google.com</code> worked just fine, which was even more stunning.</p><h2 id=how-dns-works-on-linux>How DNS works on Linux</h2><p>For DNS, all programs usually end up calling <a href=https://man7.org/linux/man-pages/man3/gethostbyname_r.3.html><code>gethostbyname(3)</code></a>. That&rsquo;ll go through
-<code>/etc/hosts</code>, then hops into <code>/etc/resolv.conf</code> etc. depending on your <code>/etc/nsswitch.conf</code> configuration (if you are using <a href=https://www.gnu.org/software/libc/>glibc</a>).<br>It&rsquo;s usually hidden into implementation details how this all works.</p><h2 id=let-the-digging-begin>Let the digging begin</h2><p>First I tried fresh Ubuntu container - <code>docker run --rm -ti --name=pinger --network=orchestrator_network ubuntu:latest ping -c database</code>, and it well&mldr;
-worked.</p><p>Then I tried Alpine container - yup, that also worked.</p><p>My first suspect was <code>/etc/resolv.conf</code> being poorly configured, such as <code>ndots:n</code> or <code>options edns0</code> conflicting hard. Removing either or both of them fixed
-nothing.</p><p>I talked to few people I know, they simply said Linux DNS is plain broken and only way to get around it was to not use any DNS. I dismissed that because
-it sounded very silly and unhelpful. Or is it really&mldr;?</p><h3 id=difference-between-ubuntu-and-alpine>Difference between Ubuntu and Alpine</h3><p>Ubuntu uses <a href=https://www.gnu.org/software/libc/>glibc</a>, Alpine uses <a href=https://musl.libc.org/>musl libc</a>.</p><p>My next suspect was <code>/etc/nsswitch.conf</code> - maybe that&rsquo;s poorly configured? musl libc does not consult with it, but glibc does.
-I bind mounted a known good configuration (from my Arch Linux laptop) over Ubuntu&rsquo;s; still no bueno.</p><p>Then I simply replaced Java Docker image with AdoptOpenJDK&rsquo;s Alpine based image in <code>docker-compose.yml</code> - Java app still did not start working properly, but
-other utilities worked just fine (<code>dig</code>, <code>ping</code> etc.)&mldr; So I&rsquo;m one step closer - seems like Java is doing DNS in some other way.</p><p>I tried tweaking Java DNS options (disabling DNS caching, by setting TTL to 0) with no success.</p><p>Now I went after the Alpine AdoptOpenJDK Dockerfile. <a href=https://archive.is/O6S6Z>Turns out that Alpine images still use glibc for AdoptOpenJDK binaries!</a>.
-OK, so I can blame glibc now.</p><h3 id=dns-query-using-glibc>DNS query using glibc</h3><p>I decided to write a small C program to test <code>gethostbyname(3)</code> with <code>strace</code>.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+(manual /24 subnet configuration and firewalling). <sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup></p>
+<p>It also bound whole <code>/var/run</code> into the container to access Docker API socket (it&rsquo;s still sitting at <code>/var/run/docker.sock</code> at the time of writing).
+Binding only the socket file breaks with Docker&rsquo;s <a href=https://docs.docker.com/config/containers/live-restore/>live restore</a> functionality, as socket file has to be recreated on restart, thus breaking orchestrator&rsquo;s access to the Docker API.</p>
+<h2 id=how-the-all-hell-broke-loose>How the all hell broke loose</h2>
+<p>One day I got annoyed because how often and unnecessarily NixOS decides to restart crucial services, bringing down the database, Redis etc.; so I
+decided to move all needed services into Docker and call it a day.</p>
+<p>15 minutes into moving data and partially rewiring everything inside <code>docker-compose.yml</code>, I ended up with a very bizarre issue:
+Clojure app is unable to resolve anything; no database, Redis, nothing. Internal DNS was completely broken.</p>
+<p>I checked if container name aliases weren&rsquo;t missing, using <code>docker inspect</code>. Resolving e.g <code>google.com</code> worked just fine, which was even more stunning.</p>
+<h2 id=how-dns-works-on-linux>How DNS works on Linux</h2>
+<p>For DNS, all programs usually end up calling <a href=https://man7.org/linux/man-pages/man3/gethostbyname_r.3.html><code>gethostbyname(3)</code></a>. That&rsquo;ll go through
+<code>/etc/hosts</code>, then hops into <code>/etc/resolv.conf</code> etc. depending on your <code>/etc/nsswitch.conf</code> configuration (if you are using <a href=https://www.gnu.org/software/libc/>glibc</a>).<br>
+It&rsquo;s usually hidden into implementation details how this all works.</p>
+<h2 id=let-the-digging-begin>Let the digging begin</h2>
+<p>First I tried fresh Ubuntu container - <code>docker run --rm -ti --name=pinger --network=orchestrator_network ubuntu:latest ping -c database</code>, and it well&mldr;
+worked.</p>
+<p>Then I tried Alpine container - yup, that also worked.</p>
+<p>My first suspect was <code>/etc/resolv.conf</code> being poorly configured, such as <code>ndots:n</code> or <code>options edns0</code> conflicting hard. Removing either or both of them fixed
+nothing.</p>
+<p>I talked to few people I know, they simply said Linux DNS is plain broken and only way to get around it was to not use any DNS. I dismissed that because
+it sounded very silly and unhelpful. Or is it really&mldr;?</p>
+<h3 id=difference-between-ubuntu-and-alpine>Difference between Ubuntu and Alpine</h3>
+<p>Ubuntu uses <a href=https://www.gnu.org/software/libc/>glibc</a>, Alpine uses <a href=https://musl.libc.org/>musl libc</a>.</p>
+<p>My next suspect was <code>/etc/nsswitch.conf</code> - maybe that&rsquo;s poorly configured? musl libc does not consult with it, but glibc does.
+I bind mounted a known good configuration (from my Arch Linux laptop) over Ubuntu&rsquo;s; still no bueno.</p>
+<p>Then I simply replaced Java Docker image with AdoptOpenJDK&rsquo;s Alpine based image in <code>docker-compose.yml</code> - Java app still did not start working properly, but
+other utilities worked just fine (<code>dig</code>, <code>ping</code> etc.)&mldr; So I&rsquo;m one step closer - seems like Java is doing DNS in some other way.</p>
+<p>I tried tweaking Java DNS options (disabling DNS caching, by setting TTL to 0) with no success.</p>
+<p>Now I went after the Alpine AdoptOpenJDK Dockerfile. <a href=https://archive.is/O6S6Z>Turns out that Alpine images still use glibc for AdoptOpenJDK binaries!</a>.
+OK, so I can blame glibc now.</p>
+<h3 id=dns-query-using-glibc>DNS query using glibc</h3>
+<p>I decided to write a small C program to test <code>gethostbyname(3)</code> with <code>strace</code>.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
 </span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;arpa/inet.h&gt;</span><span style=color:#75715e>
 </span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;netdb.h&gt;</span><span style=color:#75715e>
 </span><span style=color:#75715e></span>
@@ -19,8 +77,10 @@ main(<span style=color:#66d9ef>int</span> argc, <span style=color:#66d9ef>char</
     <span style=color:#66d9ef>struct</span> hostent <span style=color:#f92672>*</span>lh <span style=color:#f92672>=</span> gethostbyname(argv[<span style=color:#ae81ff>1</span>]);
     printf(<span style=color:#e6db74>&#34;res: %s</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>, (lh <span style=color:#f92672>?</span> inet_ntoa(<span style=color:#f92672>*</span>((<span style=color:#66d9ef>struct</span> in_addr<span style=color:#f92672>*</span>) lh<span style=color:#f92672>-&gt;</span>h_addr_list[<span style=color:#ae81ff>0</span>])) <span style=color:#f92672>:</span> <span style=color:#e6db74>&#34;(failed)&#34;</span>));
 }
-</code></pre></div><p>&mldr;and the one-liner copypasteable version:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>echo -e <span style=color:#e6db74>&#39;#include&lt;stdio.h&gt;\n#include&lt;arpa/inet.h&gt;\n#include&lt;netdb.h&gt;\nmain(int argc,char **argv){struct hostent *lh=gethostbyname(argv[1]); printf(&#34;res: %s\\n&#34;,(lh?inet_ntoa(*((struct in_addr*)lh-&gt;h_addr_list[0])):&#34;(failed)&#34;));}&#39;</span> | gcc -x c - -o /dns
-</code></pre></div><p>Compiled and ran it on Ubuntu container, I saw this: <sup id=fnref:2><a href=#fn:2 class=footnote-ref role=doc-noteref>2</a></sup></p><pre><code class=language-strace data-lang=strace>stat(&quot;/etc/resolv.conf&quot;, {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
+</code></pre></div><p>&mldr;and the one-liner copypasteable version:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>echo -e <span style=color:#e6db74>&#39;#include&lt;stdio.h&gt;\n#include&lt;arpa/inet.h&gt;\n#include&lt;netdb.h&gt;\nmain(int argc,char **argv){struct hostent *lh=gethostbyname(argv[1]); printf(&#34;res: %s\\n&#34;,(lh?inet_ntoa(*((struct in_addr*)lh-&gt;h_addr_list[0])):&#34;(failed)&#34;));}&#39;</span> | gcc -x c - -o /dns
+</code></pre></div><p>Compiled and ran it on Ubuntu container, I saw this: <sup id=fnref:2><a href=#fn:2 class=footnote-ref role=doc-noteref>2</a></sup></p>
+<pre tabindex=0><code class=language-strace data-lang=strace>stat(&quot;/etc/resolv.conf&quot;, {st_mode=S_IFREG|0444, st_size=36, ...}) = 0
 openat(AT_FDCWD, &quot;/etc/host.conf&quot;, O_RDONLY|O_CLOEXEC) = 3
 fstat(3, {st_mode=S_IFREG|0444, st_size=9, ...}) = 0
 read(3, &quot;multi on\n&quot;, 4096)             = 9
@@ -52,7 +112,46 @@ write(1, &quot;res: (failed)\n&quot;, 14res: (failed)
 )         = 14
 exit_group(0)                           = ?
 +++ exited with 0 +++
-</code></pre><p>wait wait wait&mldr; it&rsquo;s consulting with <a href=https://linux.die.net/man/8/nscd>NSCD</a> over <code>/var/run/nscd/socket</code>, instead of reading <code>/etc/resolv.conf</code> and doing DNS query on its own! No wonder why DNS worked properly on Alpine / musl libc.</p><p>This container has been sending DNS queries to the host all the time, host will never be aware of container-specific internal DNS.</p><p>Turns out there is no way to override using nscd on runtime either.</p><h2 id=solutions>Solutions</h2><p>Gah, finally hours of debugging got me somewhere and I can sleep in peace now.</p><h3 id=option-1-do-not-bind-mount-varrun>Option 1: do not bind mount /var/run</h3><p>That&rsquo;s it, just don&rsquo;t do that. Unless you run pure musl libc/statically linked programs, perhaps?</p><p>I made Docker listen on socket file at <code>/var/run/zentria/docker.sock</code> for example, and then I simply mounted
-<code>/var/lib/zentria</code> into the container.</p><h3 id=option-2-mount-tmpfs-over-varrunnscd>Option 2: mount tmpfs over /var/run/nscd</h3><p>That&rsquo;s rather a temporary solution.</p><h3 id=option-3-mount-varrun-somewhere-else-like-hostvarrun>Option 3: mount /var/run somewhere else, like /host/var/run</h3><p>That&rsquo;ll work too, but you&rsquo;ll also very likely expose unwanted files into the container. Less access the better it is.</p><p>You should consider picking Option 1 instead.</p><h3 id=option-4-access-docker-api-over-tcptls>Option 4: access Docker API over TCP+TLS</h3><p>That&rsquo;s the most secure way, as this allows more fine grained control. Besides PKI based auth, you are able
-to set up an authorization plugin to apply limits to the API - making Docker API access less equal to <code>root</code> access on host ;)</p><h2 id=tldr>TL;DR</h2><p>Linux DNS is not broken. Do not mount <code>/var/run</code> into container&rsquo;s <code>/var/run</code> blindly - especially if you have <code>nscd</code> running on host.</p><section class=footnotes role=doc-endnotes><hr><ol><li id=fn:1 role=doc-endnote><p>I think Docker on Linux still does not have this <code>host.docker.internal</code> DNS address set up.&#160;<a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li><li id=fn:2 role=doc-endnote><p>Well this <code>strace</code> output is from my current NixOS installation. Only had poor quality pictures around from the real environment.&#160;<a href=#fnref:2 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li></ol></section></div><div class=pagination><a href=/posts/its-2021-nftables-still-does-not-integrate/ class="left arrow">&#8592;</a>
-<a href=# class=top>Top</a></div></main><footer><span>&copy; <time datetime="2021-12-24 17:18:57.50131454 +0000 UTC m=+0.035865630">2021</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.</span></footer></body></html>
+</code></pre><p>wait wait wait&mldr; it&rsquo;s consulting with <a href=https://linux.die.net/man/8/nscd>NSCD</a> over <code>/var/run/nscd/socket</code>, instead of reading <code>/etc/resolv.conf</code> and doing DNS query on its own! No wonder why DNS worked properly on Alpine / musl libc.</p>
+<p>This container has been sending DNS queries to the host all the time, host will never be aware of container-specific internal DNS.</p>
+<p>Turns out there is no way to override using nscd on runtime either.</p>
+<h2 id=solutions>Solutions</h2>
+<p>Gah, finally hours of debugging got me somewhere and I can sleep in peace now.</p>
+<h3 id=option-1-do-not-bind-mount-varrun>Option 1: do not bind mount /var/run</h3>
+<p>That&rsquo;s it, just don&rsquo;t do that. Unless you run pure musl libc/statically linked programs, perhaps?</p>
+<p>I made Docker listen on socket file at <code>/var/run/zentria/docker.sock</code> for example, and then I simply mounted
+<code>/var/lib/zentria</code> into the container.</p>
+<h3 id=option-2-mount-tmpfs-over-varrunnscd>Option 2: mount tmpfs over /var/run/nscd</h3>
+<p>That&rsquo;s rather a temporary solution.</p>
+<h3 id=option-3-mount-varrun-somewhere-else-like-hostvarrun>Option 3: mount /var/run somewhere else, like /host/var/run</h3>
+<p>That&rsquo;ll work too, but you&rsquo;ll also very likely expose unwanted files into the container. Less access the better it is.</p>
+<p>You should consider picking Option 1 instead.</p>
+<h3 id=option-4-access-docker-api-over-tcptls>Option 4: access Docker API over TCP+TLS</h3>
+<p>That&rsquo;s the most secure way, as this allows more fine grained control. Besides PKI based auth, you are able
+to set up an authorization plugin to apply limits to the API - making Docker API access less equal to <code>root</code> access on host ;)</p>
+<h2 id=tldr>TL;DR</h2>
+<p>Linux DNS is not broken. Do not mount <code>/var/run</code> into container&rsquo;s <code>/var/run</code> blindly - especially if you have <code>nscd</code> running on host.</p>
+<section class=footnotes role=doc-endnotes>
+<hr>
+<ol>
+<li id=fn:1 role=doc-endnote>
+<p>I think Docker on Linux still does not have this <code>host.docker.internal</code> DNS address set up.&#160;<a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p>
+</li>
+<li id=fn:2 role=doc-endnote>
+<p>Well this <code>strace</code> output is from my current NixOS installation. Only had poor quality pictures around from the real environment.&#160;<a href=#fnref:2 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p>
+</li>
+</ol>
+</section>
+</div>
+<div class=pagination>
+<a href=/posts/its-2021-nftables-still-does-not-integrate/ class="left arrow">&#8592;</a>
+<a href=# class=top>Top</a>
+</div>
+</main>
+<footer>
+<span>
+&copy; <time datetime="2021-12-24 17:26:56.272242161 +0000 UTC m=+0.053770788">2021</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+</span>
+</footer>
+</body>
+</html>

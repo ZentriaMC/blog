@@ -1,15 +1,58 @@
-<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>An adventure of getting Docker on NixOS running only with cgroups v2 &#183; Zentria Blog</title><link rel=stylesheet href=/css/style.css><link rel=stylesheet href=/css/fonts.css><link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png><link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png><link href rel=alternate type=application/rss+xml title="Zentria Blog"></head><body><nav class=nav><div class=nav-container><a href=/><h2 class=nav-title>Zentria Blog</h2></a><ul></ul></div></nav><main><div class=post><div class=post-info><span>Written by</span>
-Mark V.<br><span>on&nbsp;</span><time datetime="2020-10-24 14:46:00 +0300 +0300">October 24, 2020</time></div><h1 class=post-title>An adventure of getting Docker on NixOS running only with cgroups v2</h1><div class=post-line></div><p>After discovering Linux&rsquo;s wonderful <a href=https://www.kernel.org/doc/html/latest/accounting/psi.html>Pressure Stall Information</a> (PSI for short) subsystem, I&rsquo;ve been trying to set up monitoring on
-Docker containers where I run very memory, CPU and I/O hungry game servers (not hard to guess - it&rsquo;s <a href=https://minecraft.net>Minecraft</a>).</p><p>Since I monitor pretty much everything using Prometheus, then finding <a href=https://github.com/cloudflare/psi_exporter>Cloudflare&rsquo;s psi_exporter</a> project made my life a lot easier - I
-didn&rsquo;t have to write an exporter myself.</p><h2 id=why-do-cgroups-v2-matter-why-isnt-v1-sufficient>Why do cgroups v2 matter? Why isn&rsquo;t v1 sufficient?</h2><p>But wait, hold up. Docker <a href=https://github.com/docker/docker-ce/releases/tag/v19.03.13>v19.03.13</a> does not support cgroups v2 yet, and only uses cgroups v1 to do its things!
+<!doctype html><html lang=en-us>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>An adventure of getting Docker on NixOS running only with cgroups v2 &#183; Zentria Blog</title>
+<link rel=stylesheet href=/css/style.css>
+<link rel=stylesheet href=/css/fonts.css>
+<link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
+<link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
+<link href rel=alternate type=application/rss+xml title="Zentria Blog">
+</head>
+<body>
+<nav class=nav>
+<div class=nav-container>
+<a href=/>
+<h2 class=nav-title>Zentria Blog</h2>
+</a>
+<ul>
+</ul>
+</div>
+</nav>
+<main>
+<div class=post>
+<div class=post-info>
+<span>Written by</span>
+Mark V.
+<br>
+<span>on&nbsp;</span><time datetime="2020-10-24 14:46:00 +0300 +0300">October 24, 2020</time>
+</div>
+<h1 class=post-title>An adventure of getting Docker on NixOS running only with cgroups v2</h1>
+<div class=post-line></div>
+<p>After discovering Linux&rsquo;s wonderful <a href=https://www.kernel.org/doc/html/latest/accounting/psi.html>Pressure Stall Information</a> (PSI for short) subsystem, I&rsquo;ve been trying to set up monitoring on
+Docker containers where I run very memory, CPU and I/O hungry game servers (not hard to guess - it&rsquo;s <a href=https://minecraft.net>Minecraft</a>).</p>
+<p>Since I monitor pretty much everything using Prometheus, then finding <a href=https://github.com/cloudflare/psi_exporter>Cloudflare&rsquo;s psi_exporter</a> project made my life a lot easier - I
+didn&rsquo;t have to write an exporter myself.</p>
+<h2 id=why-do-cgroups-v2-matter-why-isnt-v1-sufficient>Why do cgroups v2 matter? Why isn&rsquo;t v1 sufficient?</h2>
+<p>But wait, hold up. Docker <a href=https://github.com/docker/docker-ce/releases/tag/v19.03.13>v19.03.13</a> does not support cgroups v2 yet, and only uses cgroups v1 to do its things!
 Thus we&rsquo;re not able to get very precise information about resource starvation per container. We&rsquo;re just stuck with getting PSI only
 about <code>/system.slice/docker.service</code>, which is not very informative - I would have hard time figuring out which of those 50+ containers
 were starved of either CPU, memory or I/O (purely using that metric - probably could assume what was using metrics from <a href=https://github.com/google/cadvisor>cAdvisor</a>, but
-that&rsquo;s not ideal either).</p><p>So we&rsquo;re kind of stuck&mldr; or are we?</p><p>Here&rsquo;s my story about finding a solution to that problem.</p><h2 id=figuring-out-where-to-start>Figuring out where to start</h2><p>Good starting point was forcing my NixOS system to disable cgroups v1 completely, that can be easily done using kernel arguments.</p><pre><code>boot.kernelParams = [ &quot;cgroup_no_v1=all&quot; &quot;systemd.unified_cgroup_hierarchy=1&quot; ];
-</code></pre><p>And that should be enough to break Docker on NixOS (as of 23rd October 2020) - check it yourself, for example using <code>docker run -d alpine:latest</code>.</p><p>You&rsquo;ll end up with the following:</p><pre><code>&lt;container id&gt;
+that&rsquo;s not ideal either).</p>
+<p>So we&rsquo;re kind of stuck&mldr; or are we?</p>
+<p>Here&rsquo;s my story about finding a solution to that problem.</p>
+<h2 id=figuring-out-where-to-start>Figuring out where to start</h2>
+<p>Good starting point was forcing my NixOS system to disable cgroups v1 completely, that can be easily done using kernel arguments.</p>
+<pre tabindex=0><code>boot.kernelParams = [ &quot;cgroup_no_v1=all&quot; &quot;systemd.unified_cgroup_hierarchy=1&quot; ];
+</code></pre><p>And that should be enough to break Docker on NixOS (as of 23rd October 2020) - check it yourself, for example using <code>docker run -d alpine:latest</code>.</p>
+<p>You&rsquo;ll end up with the following:</p>
+<pre tabindex=0><code>&lt;container id&gt;
 docker: Error response from daemon: cgroups: cgroup mountpoint does not exist: unknown.
 </code></pre><p>Alright, since we&rsquo;ve confirmed that things are broken, now we need to figure out what to actually do.
-Let&rsquo;s start from lowering Docker&rsquo;s log level to debug. It&rsquo;s as easy as <code>virtualisation.docker.extraOptions = "-D";</code>. Let&rsquo;s try starting a new container&mldr;</p><p>Now we have very likely something in the journal, let&rsquo;s check.</p><pre><code>Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694386175+03:00&quot; level=warning msg=&quot;Your kernel does not support swap memory limit&quot;
+Let&rsquo;s start from lowering Docker&rsquo;s log level to debug. It&rsquo;s as easy as <code>virtualisation.docker.extraOptions = "-D";</code>. Let&rsquo;s try starting a new container&mldr;</p>
+<p>Now we have very likely something in the journal, let&rsquo;s check.</p>
+<pre tabindex=0><code>Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694386175+03:00&quot; level=warning msg=&quot;Your kernel does not support swap memory limit&quot;
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694446465+03:00&quot; level=warning msg=&quot;Your kernel does not support memory reservation&quot;
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694500678+03:00&quot; level=warning msg=&quot;Your kernel does not support oom control&quot;
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694540575+03:00&quot; level=warning msg=&quot;Your kernel does not support memory swappiness&quot;
@@ -21,12 +64,21 @@ Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694741032+03
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694788141+03:00&quot; level=warning msg=&quot;Your kernel does not support cgroup rt period&quot;
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694823573+03:00&quot; level=warning msg=&quot;Your kernel does not support cgroup rt runtime&quot;
 Oct 23 23:47:06 nixos dockerd[3453]: time=&quot;2020-10-23T23:47:06.694860484+03:00&quot; level=warning msg=&quot;Unable to find blkio cgroup in mounts&quot;
-</code></pre><p>Clearly, does not support cgroups v2 as it &ldquo;cannot find&rdquo; the required cgroups.</p><p>Time to check what&rsquo;s up in NixOS <a href=https://github.com/NixOS/nixpkgs/blob/066397c0fe3686efcbaf6505c535494e63bdc9b2/pkgs/applications/virtualization/docker/default.nix>Docker derivation</a></p><h2 id=researching-what-to-update>Researching what to update</h2><p>Docker consists of two extra parts: containerd and OCI runtime (runc by default and even in this case here). So we need to update 3 things in total.</p><p>Now it&rsquo;s time to look into <a href=https://github.com/docker/docker-ce>docker-ce repository</a>&rsquo;s <a href=https://github.com/docker/docker-ce/blob/6d281252d3fbbff836e94caeb37e104830bd700f/CHANGELOG.md>changelog</a> on master branch - it contains the freshest changes. Seems like cgroups v2 support in Docker
+</code></pre><p>Clearly, does not support cgroups v2 as it &ldquo;cannot find&rdquo; the required cgroups.</p>
+<p>Time to check what&rsquo;s up in NixOS <a href=https://github.com/NixOS/nixpkgs/blob/066397c0fe3686efcbaf6505c535494e63bdc9b2/pkgs/applications/virtualization/docker/default.nix>Docker derivation</a></p>
+<h2 id=researching-what-to-update>Researching what to update</h2>
+<p>Docker consists of two extra parts: containerd and OCI runtime (runc by default and even in this case here). So we need to update 3 things in total.</p>
+<p>Now it&rsquo;s time to look into <a href=https://github.com/docker/docker-ce>docker-ce repository</a>&rsquo;s <a href=https://github.com/docker/docker-ce/blob/6d281252d3fbbff836e94caeb37e104830bd700f/CHANGELOG.md>changelog</a> on master branch - it contains the freshest changes. Seems like cgroups v2 support in Docker
 is rather fresh - changelog change mentioning it was done on 18th September. Last pieces of the required code were merged in March as much as I looked
 into the issues. Since there are no beta release tags (side note: there was one for about 21 hours for <code>20.10.0-beta1</code>, but it has vanished), then I&rsquo;m
-going to proceed with commit <code>3b9fb515ce3a39e2d9a1dcd7f094eb3ed511581d</code>.</p><p>Searching <code>containerd cgroups v2 support</code> leads me to <a href=https://github.com/containerd/containerd/issues/3726>an issue with same title</a> - turns out cgroups v2 support has already landed.
-Linked <a href=https://github.com/containerd/containerd/issues/3726>PR</a> in the end of the issue tells me that its support is present in <a href=https://github.com/containerd/containerd/releases/tag/v1.4.0-beta.0>1.4.0-beta.0</a>. So we can freely use stable <a href=https://github.com/containerd/containerd/releases/tag/v1.4.1>1.4.1</a>.</p><p>Now it&rsquo;s time to hunt down 2nd part - <code>runc cgroups v2 support</code> leads me to its <a href=https://github.com/opencontainers/runc/blob/b4483305148986b5b693cdc62ebbe7eaa0e330be/docs/cgroup-v2.md>cgroup v2 support document</a> - sweet. We need at least <code>v1.0.0-rc91</code>,
-we&rsquo;re going to get slightly newer version <a href=https://github.com/opencontainers/runc/releases/tag/v1.0.0-rc92>v1.0.0-rc92</a>.</p><h2 id=time-to-edit-the-derivation>Time to edit the derivation</h2><p>I simply copied the previously linked Docker derivation into <code>/etc/nixos/updated-docker.nix</code> and added needed modifications.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-diff data-lang=diff><span style=color:#f92672>--- /etc/nixos/updated-docker.orig.nix
+going to proceed with commit <code>3b9fb515ce3a39e2d9a1dcd7f094eb3ed511581d</code>.</p>
+<p>Searching <code>containerd cgroups v2 support</code> leads me to <a href=https://github.com/containerd/containerd/issues/3726>an issue with same title</a> - turns out cgroups v2 support has already landed.
+Linked <a href=https://github.com/containerd/containerd/issues/3726>PR</a> in the end of the issue tells me that its support is present in <a href=https://github.com/containerd/containerd/releases/tag/v1.4.0-beta.0>1.4.0-beta.0</a>. So we can freely use stable <a href=https://github.com/containerd/containerd/releases/tag/v1.4.1>1.4.1</a>.</p>
+<p>Now it&rsquo;s time to hunt down 2nd part - <code>runc cgroups v2 support</code> leads me to its <a href=https://github.com/opencontainers/runc/blob/b4483305148986b5b693cdc62ebbe7eaa0e330be/docs/cgroup-v2.md>cgroup v2 support document</a> - sweet. We need at least <code>v1.0.0-rc91</code>,
+we&rsquo;re going to get slightly newer version <a href=https://github.com/opencontainers/runc/releases/tag/v1.0.0-rc92>v1.0.0-rc92</a>.</p>
+<h2 id=time-to-edit-the-derivation>Time to edit the derivation</h2>
+<p>I simply copied the previously linked Docker derivation into <code>/etc/nixos/updated-docker.nix</code> and added needed modifications.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-diff data-lang=diff><span style=color:#f92672>--- /etc/nixos/updated-docker.orig.nix
 </span><span style=color:#f92672></span><span style=color:#a6e22e>+++ /etc/nixos/updated-docker.nix
 </span><span style=color:#a6e22e></span><span style=color:#75715e>@@ -33,7 +33,7 @@
 </span><span style=color:#75715e></span>       name = &#34;docker-containerd-${version}&#34;;
@@ -83,14 +135,22 @@ we&rsquo;re going to get slightly newer version <a href=https://github.com/openc
 </span><span style=color:#a6e22e></span> }
 
 </code></pre></div><p>Note that disabing manpages is not really intentional - their building failed and I did not want to stop on
-that step for too long.</p><p>To make my system use newly created Docker derivation, I added following part into my system configuration:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix>  nixpkgs<span style=color:#f92672>.</span>overlays <span style=color:#960050;background-color:#1e0010>=</span> [
+that step for too long.</p>
+<p>To make my system use newly created Docker derivation, I added following part into my system configuration:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix>  nixpkgs<span style=color:#f92672>.</span>overlays <span style=color:#960050;background-color:#1e0010>=</span> [
     (self: super: {
       docker <span style=color:#f92672>=</span> (super<span style=color:#f92672>.</span>callPackage <span style=color:#e6db74>./updated-docker.nix</span> {})<span style=color:#f92672>.</span>docker_20_10;
     })
   ];
-</code></pre></div><p>And now good old <code>nixos-rebuild switch</code>.</p><p>Note that building Docker and its components takes more than 1GiB of disk space, so if you installed <a href=https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/>NixOS on tmpfs</a> (or have small tmpfs, or not much RAM),
-then you should consider reconfiguring your system to have larger /tmp part or let Nix build on persistent storage (e.g <code>sudo env TMPDIR=/home/mark/tmp nixos-rebuild switch</code>)</p><p>After moderate build time, I&rsquo;ll see Docker successfully being restarted. Now I have functional Docker instance.</p><p>Running <code>sudo docker run --rm -ti alpine:latest /bin/sh -c "echo it works"</code> to confirm. If you see <code>it works</code>, then obviously, it works.</p><h2 id=exploring-the-gains>Exploring the gains</h2><p>Now starting e.g nginx (<code>docker run -d -p 8080:80 nginx:latest</code>) and doing <code>systemd-cgls</code>, I can see nginx running in its own scope instead of being
-under <code>docker.service</code>.</p><pre><code>  ├─docker.service
+</code></pre></div><p>And now good old <code>nixos-rebuild switch</code>.</p>
+<p>Note that building Docker and its components takes more than 1GiB of disk space, so if you installed <a href=https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/>NixOS on tmpfs</a> (or have small tmpfs, or not much RAM),
+then you should consider reconfiguring your system to have larger /tmp part or let Nix build on persistent storage (e.g <code>sudo env TMPDIR=/home/mark/tmp nixos-rebuild switch</code>)</p>
+<p>After moderate build time, I&rsquo;ll see Docker successfully being restarted. Now I have functional Docker instance.</p>
+<p>Running <code>sudo docker run --rm -ti alpine:latest /bin/sh -c "echo it works"</code> to confirm. If you see <code>it works</code>, then obviously, it works.</p>
+<h2 id=exploring-the-gains>Exploring the gains</h2>
+<p>Now starting e.g nginx (<code>docker run -d -p 8080:80 nginx:latest</code>) and doing <code>systemd-cgls</code>, I can see nginx running in its own scope instead of being
+under <code>docker.service</code>.</p>
+<pre tabindex=0><code>  ├─docker.service
   │ ├─1316 /nix/store/ci6jdb9f25nkc938zj7mzgl367336klf-docker-20.10.0-beta1/libexec/docker/dockerd --group=docker --host=fd:// --log-driver=journald --live-restore -D
   │ ├─1336 containerd --config /var/run/docker/containerd/containerd.toml --log-level debug
   │ ├─1680 /nix/store/ci6jdb9f25nkc938zj7mzgl367336klf-docker-20.10.0-beta1/libexec/docker/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 8080 -container-ip 172.17.0.2 -container-port 80
@@ -98,8 +158,21 @@ under <code>docker.service</code>.</p><pre><code>  ├─docker.service
   ├─docker-98819ab92f08b5ce1a0287edf3c7b68da981265d45d6e54b862f76518de6b8ca.scope
   │ ├─1714 nginx: master process nginx -g daemon off;
   │ └─1782 nginx: worker process
-</code></pre><p>And hey, now I can poke into the PSI subsystem:</p><pre><code>[mark@nixos:~]$ cat /sys/fs/cgroup/system.slice/docker-98819ab92f08b5ce1a0287edf3c7b68da981265d45d6e54b862f76518de6b8ca.scope/memory.pressure
+</code></pre><p>And hey, now I can poke into the PSI subsystem:</p>
+<pre tabindex=0><code>[mark@nixos:~]$ cat /sys/fs/cgroup/system.slice/docker-98819ab92f08b5ce1a0287edf3c7b68da981265d45d6e54b862f76518de6b8ca.scope/memory.pressure
 some avg10=0.00 avg60=0.00 avg300=0.00 total=0
 full avg10=0.00 avg60=0.00 avg300=0.00 total=0
-</code></pre><p>That&rsquo;s all for today.</p></div><div class=pagination><a href=/posts/its-2021-nftables-still-does-not-integrate/ class="right arrow">&#8594;</a>
-<a href=# class=top>Top</a></div></main><footer><span>&copy; <time datetime="2021-12-24 17:18:57.502034252 +0000 UTC m=+0.036585242">2021</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.</span></footer></body></html>
+</code></pre><p>That&rsquo;s all for today.</p>
+</div>
+<div class=pagination>
+<a href=/posts/its-2021-nftables-still-does-not-integrate/ class="right arrow">&#8594;</a>
+<a href=# class=top>Top</a>
+</div>
+</main>
+<footer>
+<span>
+&copy; <time datetime="2021-12-24 17:26:56.268063814 +0000 UTC m=+0.049592541">2021</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+</span>
+</footer>
+</body>
+</html>
