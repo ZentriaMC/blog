@@ -5,6 +5,7 @@
 <title>Posts &#183; Zentria Blog</title>
 <link rel=stylesheet href=/css/style.css>
 <link rel=stylesheet href=/css/fonts.css>
+<link rel=icon href=favicon.ico>
 <link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
 <link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
 <link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
@@ -14,7 +15,7 @@
 <nav class=nav>
 <div class=nav-container>
 <a href=/>
-<h2 class=nav-title>Zentria Blog</h2>
+<h1 class=nav-title>Zentria Blog</h1>
 </a>
 <ul>
 </ul>
@@ -25,7 +26,7 @@
 <a href=https://blog.zentria.company/posts/container-bind-mount-pitfalls-dns/ class=catalogue-item>
 <div>
 <time datetime="2021-06-06 19:56:22 +0300 +0300" class=catalogue-time>June 6, 2021</time>
-<h1 class=catalogue-title>Container bind mount pitfalls: DNS</h1>
+<h2 class=catalogue-title>Container bind mount pitfalls: DNS</h2>
 <div class=catalogue-line></div>
 <p>
 It's not DNS. There's no way it's DNS. It was DNS. Story time? Story time. I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect to a PostgreSQL database and Redis running on the container host, implying no magical DNS solutions nor any convenience at all (manual /24 subnet configuration and firewalling). 1
@@ -35,7 +36,7 @@ It's not DNS. There's no way it's DNS. It was DNS. Story time? Story time. I had
 <a href=https://blog.zentria.company/posts/its-2021-nftables-still-does-not-integrate/ class=catalogue-item>
 <div>
 <time datetime="2021-05-29 19:25:17 +0300 +0300" class=catalogue-time>May 29, 2021</time>
-<h1 class=catalogue-title>It's 2021: nftables still does not integrate</h1>
+<h2 class=catalogue-title>It's 2021: nftables still does not integrate</h2>
 <div class=catalogue-line></div>
 <p>
 You probably have seen it around somewhere already, for example Debian trying hard to replace iptables with it.
@@ -48,7 +49,7 @@ HOWEVER, integrating it into existing solutions turns out to be VERY painful:
 <a href=https://blog.zentria.company/posts/nixos-cgroupsv2/ class=catalogue-item>
 <div>
 <time datetime="2020-10-24 14:46:00 +0300 +0300" class=catalogue-time>October 24, 2020</time>
-<h1 class=catalogue-title>An adventure of getting Docker on NixOS running only with cgroups v2</h1>
+<h2 class=catalogue-title>An adventure of getting Docker on NixOS running only with cgroups v2</h2>
 <div class=catalogue-line></div>
 <p>
 After discovering Linux&rsquo;s wonderful Pressure Stall Information (PSI for short) subsystem, I&rsquo;ve been trying to set up monitoring on Docker containers where I run very memory, CPU and I/O hungry game servers (not hard to guess - it&rsquo;s Minecraft).
@@ -64,7 +65,7 @@ Why do cgroups v2 matter?
 </main>
 <footer>
 <span>
-&copy; <time datetime="2022-03-19 11:51:52.702575929 +0000 UTC m=+0.055380386">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+&copy; <time datetime="2022-03-19 11:56:11.004502261 +0000 UTC m=+0.052190369">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
 </span>
 </footer>
 </body>
