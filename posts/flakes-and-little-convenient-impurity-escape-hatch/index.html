@@ -1,0 +1,105 @@
+<!doctype html><html lang=en-us>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Flakes and little convenient impurity escape hatch &#183; Zentria Blog</title>
+<link rel=stylesheet href=/css/style.css>
+<link rel=stylesheet href=/css/fonts.css>
+<link rel=icon href=favicon.ico>
+<link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
+<link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
+<link href rel=alternate type=application/rss+xml title="Zentria Blog">
+</head>
+<body>
+<nav class=nav>
+<div class=nav-container>
+<a href=/>
+<h2 class=nav-title>Zentria Blog</h2>
+</a>
+<ul>
+</ul>
+</div>
+</nav>
+<main>
+<div class=post>
+<div class=post-info>
+<span>Written by</span>
+Mark V.
+<br>
+<span>on&nbsp;</span><time datetime="2022-03-20 23:20:00 +0200 +0200">March 20, 2022</time>
+</div>
+<h1 class=post-title>Flakes and little convenient impurity escape hatch</h1>
+<div class=post-line></div>
+<p>Started using flakes recently? But then you found that:</p>
+<ol>
+<li>You need per-machine configuration for experimentation/secrets (well, e.g firewall config), but don&rsquo;t want to publish them.</li>
+<li>Your configuration is against your usual quality standards, so it&rsquo;d be shame to show them to the world.</li>
+</ol>
+<p>Here&rsquo;s one solution to that - works similarly to how current NixOS deployments are still done.</p>
+<h3 id=flakenix><code>flake.nix</code></h3>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix>{
+  inputs <span style=color:#f92672>=</span> {
+    impure-local<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;path:./impure-local&#34;</span>;
+    impure-local<span style=color:#f92672>.</span>flake <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+  };
+
+  outputs <span style=color:#f92672>=</span> { nixpkgs<span style=color:#f92672>,</span> impure-local }: {
+    nixosConfigurations<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;impure&#34;</span> <span style=color:#f92672>=</span> nixpkgs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>nixosSystem {
+      system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;aarch64-linux&#34;</span>;
+      modules <span style=color:#f92672>=</span> [
+        <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>impure-local<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+      ];
+    };
+  };
+}
+</code></pre></div><h3 id=impure-local-directory><code>impure-local</code> (directory)</h3>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell>$ mkdir -p ./impure-local
+$ echo <span style=color:#e6db74>&#39;{ ... }: {}&#39;</span> &gt; ./impure-local/default.nix
+$ nix flake lock
+</code></pre></div><p>Keep this in your repository at all times, it&rsquo;ll be used when override is not specified, and helps to keep flake.lock hash constant.</p>
+<h3 id=usage>Usage</h3>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell>$ nixos-rebuild build --flake <span style=color:#e6db74>&#39;.#impure&#39;</span> --override-input impure-local path:/etc/nixos
+</code></pre></div><p>Keep in mind that <code>--override-input impure-local ./path</code> will not work! You need to prefix it with <code>path:</code> (like <code>path:./path</code>), otherwise Nix won&rsquo;t pick the correct directory (sounds like a bug?):</p>
+<pre tabindex=0><code>warning: Git tree '/home/mark/home' is dirty
+warning: Git tree '/home/mark/home' is dirty
+warning: not writing modified lock file of flake 'git+file:///home/mark/home':
+• Updated input 'impure-local':
+    'path:./impure-local?narHash=sha256-6pJ2Ev9tyW6cLAwqqqb5+VUhqvlVne1+IlB9DtFc0Fo='
+  → 'git+file:///home/mark/home?dir=impure-local' (2022-03-20)
+error: getting status of '/nix/store/pjc26z765hj1gqhs2cac81g58fk5gvgr-source/default.nix': No such file or directory
+</code></pre><h2 id=pros>Pros</h2>
+<ul>
+<li>Impure - restores <code>/etc/nixos/configuration.nix</code>-like solution, allows to be lazy.
+<ul>
+<li><strong>However</strong> you cannot reference configurations outside the override path (good)</li>
+<li>e.g <code>/etc/nixos/default.nix</code> imports <code>./foo.nix</code> => this works</li>
+<li>e.g <code>/etc/nixos/default.nix</code> imports <code>/home/mark/foo.nix</code> => this will not, Nix will require <code>--impure</code> flag (to access files outside the store)</li>
+</ul>
+</li>
+<li>You can experiment with system changes more easily, and then refactor them into your flake</li>
+<li>Don&rsquo;t have to deal with encrypting configuration when publishing flake publicly</li>
+<li>Per-machine configuration (firewall rules etc.)</li>
+</ul>
+<h2 id=cons>Cons</h2>
+<ul>
+<li>Impure, since configuration is machine-local, then deploying same flake to new machine wouldn&rsquo;t yield same end result (duh).</li>
+<li>Whole configuration is copied into the store, secrets will be world-readable (if you declare them there)</li>
+</ul>
+<h2 id=example-configurations-using-this>Example configurations using this</h2>
+<ul>
+<li><a href=https://github.com/mikroskeem/home/tree/fff80360df1e56aa540e63c2d35901768cdb66fa>mikroskeem/home</a></li>
+</ul>
+</div>
+<div class=pagination>
+<a href=/posts/container-bind-mount-pitfalls-dns/ class="left arrow">&#8592;</a>
+<a href=# class=top>Top</a>
+</div>
+</main>
+<footer>
+<span>
+&copy; <time datetime="2022-03-20 21:40:51.624919844 +0000 UTC m=+0.049987362">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+</span>
+</footer>
+</body>
+</html>
