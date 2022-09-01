@@ -43,7 +43,7 @@ Use [firewalld][firewalld] perhaps? I could not get it working with default netw
 ### Docker:
 
 There are few solutions around, like https://archive.is/MHBu3 and https://archive.is/bqKHl, but this involves disabling
-Docker's iptables integration, making using managed networks (`docker network create <name>`) painful.
+Docker's iptables integration, making use of managed networks (`docker network create <name>`) painful.
 
 Technically could work this around by writing a events listener for Docker or using a plugin (probably?)
 
