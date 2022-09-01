@@ -56,7 +56,7 @@ Try `iptables -h' or 'iptables --help' for more information.
 <p>Use <a href=https://archive.ph/uXe1v>firewalld</a> perhaps? I could not get it working with default network though (NAT, <code>192.168.122.0/24</code> - see compatibility layer problems section).</p>
 <h3 id=docker-1>Docker:</h3>
 <p>There are few solutions around, like <a href=https://archive.is/MHBu3>https://archive.is/MHBu3</a> and <a href=https://archive.is/bqKHl>https://archive.is/bqKHl</a>, but this involves disabling
-Docker&rsquo;s iptables integration, making using managed networks (<code>docker network create &lt;name></code>) painful.</p>
+Docker&rsquo;s iptables integration, making use of managed networks (<code>docker network create &lt;name></code>) painful.</p>
 <p>Technically could work this around by writing a events listener for Docker or using a plugin (probably?)</p>
 <p>Note that using <a href=https://archive.ph/uXe1v>firewalld</a> won&rsquo;t save you with Docker - it wants to insert custom rules via <a href=https://archive.is/t3Pyl>the <code>--direct</code> interface</a></p>
 <h1 id=in-conclusion>In conclusion</h1>
@@ -87,7 +87,7 @@ Docker&rsquo;s iptables integration, making using managed networks (<code>docker
 </main>
 <footer>
 <span>
-&copy; <time datetime="2022-03-20 21:40:51.626039747 +0000 UTC m=+0.051107265">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+&copy; <time datetime="2022-09-01 19:38:17.375465234 +0000 UTC m=+0.055234193">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
 </span>
 </footer>
 </body>
