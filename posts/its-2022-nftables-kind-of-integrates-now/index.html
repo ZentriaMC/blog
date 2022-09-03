@@ -1,0 +1,83 @@
+<!doctype html><html lang=en-us>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>It's 2022: nftables kind of integrates now &#183; Zentria Blog</title>
+<link rel=stylesheet href=/css/style.css>
+<link rel=stylesheet href=/css/fonts.css>
+<link rel=icon href=favicon.ico>
+<link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
+<link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
+<link href rel=alternate type=application/rss+xml title="Zentria Blog">
+</head>
+<body>
+<nav class=nav>
+<div class=nav-container>
+<a href=/>
+<h2 class=nav-title>Zentria Blog</h2>
+</a>
+<ul>
+</ul>
+</div>
+</nav>
+<main>
+<div class=post>
+<div class=post-info>
+<span>Written by</span>
+Mark V.
+<br>
+<span>on&nbsp;</span><time datetime="2022-09-03 22:38:50 +0300 +0300">September 3, 2022</time>
+</div>
+<h1 class=post-title>It's 2022: nftables kind of integrates now</h1>
+<div class=post-line></div>
+<p>This is a follow up to the <a href=/posts/its-2021-nftables-still-does-not-integrate/>It&rsquo;s 2021: nftables still does not integrate</a>.</p>
+<h1 id=the-good-what-works-compared-to-2021>The good: What works compared to 2021?</h1>
+<p>Pretty much everything is still revolving around the iptables-nft compatibility layer, but it has improved a lot so
+things seem to work just fine now.</p>
+<h2 id=libvirt>libvirt</h2>
+<p>Everything works. Seems to implicitly use compatibility layer very likely (assuming from <a href=https://libvirt.org/formatnwfilter.html#writing-your-own-filters>libvirt Network Filters</a>).</p>
+<h2 id=docker>Docker</h2>
+<p>Everything works out of the box, without having to write own rules or handle wiring with own Docker event handler. Implicitly uses compatibility layer.</p>
+<h2 id=cni-firewall-plugin>CNI firewall plugin</h2>
+<p>Also <a href=https://github.com/containernetworking/plugins/blob/8c3664b2b158614171eedadf471c8236421aa07f/plugins/meta/firewall/firewall.go#L117>uses compatibility layer</a>. This was worth mentioning because podman, Kubernetes, containerd etc. rely on CNI.</p>
+<h1 id=the-bad>The bad</h1>
+<h2 id=scriptingfirewall-management-by-shelling-out-to-iptables>Scripting/firewall management by shelling out to iptables</h2>
+<p>Pretty much all open & popular solutions mentioning firewall management on Linux simply shell out to iptables commands.</p>
+<p>I&rsquo;ve seen one edge case with <code>iptables-nft</code> - if you try to list rules in nonexistent chain, it fails with unrelated error:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell>$ iptables-nft -t filter -X SWDFW-INPUT <span style=color:#f92672>||</span> true
+$ iptables-nft -t filter -S SWDFW-INPUT <span style=color:#ae81ff>1</span>
+iptables v1.8.8 <span style=color:#f92672>(</span>nf_tables<span style=color:#f92672>)</span>: chain <span style=color:#e6db74>`</span>SWDFW-INPUT<span style=color:#e6db74>&#39; in table `filter&#39;</span> is incompatible, use <span style=color:#e6db74>&#39;nft&#39;</span> tool.
+</code></pre></div><p><a href=https://github.com/coreos/go-iptables/blob/ff76ef3cab301766d9e92b22666403ce455054b4/iptables/iptables.go#L263>coreos/go-iptables ChainExists</a> is using <code>-S &lt;chain> 1</code> to report whether chain exists.</p>
+<p>Alternative would be doing something similar to this:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell>nft --json --stateless --terse list ruleset | jq --arg table <span style=color:#e6db74>&#34;filter&#34;</span> --arg chain <span style=color:#e6db74>&#34;SWDFW-INPUT&#34;</span> -e -r <span style=color:#e6db74>&#39;.nftables[] | select(.chain and .chain.table == $table and .chain.name == $chain) | &#34;ok&#34;&#39;</span>
+</code></pre></div><p>&mldr;however not all systems have <code>nftables</code> installed next to <code>iptables-nft</code> (NixOS - there are <code>nftables</code> and <code>iptables-nftables-compat</code> packages).</p>
+<h1 id=the-ugly>The ugly</h1>
+<h2 id=translation-layer-makes-use-of-iptables-kernel-modules-in-the-background>Translation layer makes use of iptables kernel modules in the background</h2>
+<p>Throw following into <code>/etc/modprobe.d/blacklist-iptables.conf</code> & reboot:</p>
+<pre tabindex=0><code class=language-modprobe data-lang=modprobe>install ip_tables /bin/true
+install ip6_tables /bin/true
+</code></pre><p>And try following rules:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell>ip6tables -A INPUT -p icmpv6 --icmpv6-type redirect -j DROP
+ip6tables -A INPUT -p icmpv6 --icmpv6-type <span style=color:#ae81ff>139</span> -j DROP
+</code></pre></div><p>Get <code>Extension icmpv6 revision 0 not supported, missing kernel module?</code>, why?</p>
+<p><code>modinfo ip6_tables</code> shows <code>alias: ip6t_icmp6</code>, loading it gets it working, therefore icmpv6 filtering is provided by that,
+even though nftables support icmp natively&mldr;</p>
+<p>Legacy iptables is using <code>/proc/net/ip_tables_names</code> for table names, but that&rsquo;s unsurprisingly empty on a system which doesn&rsquo;t use legacy framework.</p>
+<h1 id=future>Future</h1>
+<p>RHEL 9 <a href=https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/9.0_release_notes/index#deprecated-functionality_networking>deprecated ipset & iptables-nft</a>, I hope legacy iptables and its compatibility layer
+is going to be replaced on other distributions as well in next following years.</p>
+<p>Until then, enjoy iptables and its compatibility cruft.</p>
+</div>
+<div class=pagination>
+<a href=/posts/flakes-and-little-convenient-impurity-escape-hatch/ class="left arrow">&#8592;</a>
+<a href=# class=top>Top</a>
+</div>
+</main>
+<footer>
+<span>
+&copy; <time datetime="2022-09-03 20:52:17.734420183 +0000 UTC m=+0.060640094">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
+</span>
+</footer>
+</body>
+</html>
