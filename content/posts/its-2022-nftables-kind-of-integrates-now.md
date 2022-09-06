@@ -73,8 +73,10 @@ Legacy iptables is using `/proc/net/ip_tables_names` for table names, but that's
 
 # Future
 
-RHEL 9 [deprecated ipset & iptables-nft][rhel9-iptables-nft-deprecated], I hope legacy iptables and its compatibility layer
-is going to be replaced on other distributions as well in next following years.
+RHEL 9 [deprecated ipset & iptables-nft][rhel9-iptables-nft-deprecated]  
+OpenWRT 22.03.0 [is using nftables for its firewall management][openwrt-nftables]. It's doing [rule templating][firewall4-templates] instead of using JSON though.
+
+I hope legacy iptables and its compatibility layer is going to be replaced on other distributions as well in next following years.
 
 Until then, enjoy iptables and its compatibility cruft.
 
@@ -83,3 +85,5 @@ Until then, enjoy iptables and its compatibility cruft.
 [cni-firewall-plugin]: https://github.com/containernetworking/plugins/blob/8c3664b2b158614171eedadf471c8236421aa07f/plugins/meta/firewall/firewall.go#L117
 [go-iptables-chainexists]: https://github.com/coreos/go-iptables/blob/ff76ef3cab301766d9e92b22666403ce455054b4/iptables/iptables.go#L263
 [rhel9-iptables-nft-deprecated]: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/9.0_release_notes/index#deprecated-functionality_networking
+[openwrt-nftables]: https://openwrt.org/releases/22.03/notes-22.03.0#firewall4_based_on_nftables
+[firewall4-templates]: https://git.openwrt.org/?p=project/firewall4.git;a=tree;f=root/usr/share/firewall4/templates;h=13f86dd93a84a3693247536e3402e9a1a7fc06bc;hb=HEAD
