@@ -1,101 +1,12 @@
-<!doctype html><html lang=en-us>
-<head>
-<meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1">
-<title>Posts &#183; Zentria Blog</title>
-<link rel=stylesheet href=/css/style.css>
-<link rel=stylesheet href=/css/fonts.css>
-<link rel=icon href=/favicon.ico>
-<link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png>
-<link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png>
-<link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png>
-<link href=/posts/index.xml rel=alternate type=application/rss+xml title="Zentria Blog">
-<script src=/js/darkmode.js></script>
-</head>
-<body>
-<nav class=nav>
-<div class=nav-container>
-<a href=/>
-<h1 class=nav-title>Zentria Blog</h1>
-</a>
-<ul>
-</ul>
-</div>
-</nav>
-<div id=darkModeToggle onclick=toggleDarkMode()>
-&#9680;
-</div>
-<main>
-<div class=catalogue>
-<a href=https://blog.zentria.company/posts/its-2022-nftables-kind-of-integrates-now/ class=catalogue-item>
-<div>
-<time datetime="2022-09-03 22:38:50 +0300 +0300" class=catalogue-time>September 3, 2022</time>
-<h2 class=catalogue-title>It's 2022: nftables kind of integrates now</h2>
-<div class=catalogue-line></div>
-<p>
-This is a follow up to the It&rsquo;s 2021: nftables still does not integrate.
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Posts &#183; Zentria Blog</title><link rel=stylesheet href=/css/style.css><link rel=stylesheet href=/css/fonts.css><link rel=icon href=/favicon.ico><link rel=icon type=image/png sizes=32x32 href=/images/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/images/favicon-16x16.png><link rel=apple-touch-icon sizes=180x180 href=/images/apple-touch-icon.png><link href=/posts/index.xml rel=alternate type=application/rss+xml title="Zentria Blog"><script src=/js/darkmode.js></script></head><body><nav class=nav><div class=nav-container><a href=/><h1 class=nav-title>Zentria Blog</h1></a><ul></ul></div></nav><div id=darkModeToggle onclick=toggleDarkMode()>&#9680;</div><main><div class=catalogue><a href=https://blog.zentria.company/posts/its-2022-nftables-kind-of-integrates-now/ class=catalogue-item><div><time datetime="2022-09-03 22:38:50 +0300 +0300" class=catalogue-time>September 3, 2022</time><h2 class=catalogue-title>It's 2022: nftables kind of integrates now</h2><div class=catalogue-line></div><p>This is a follow up to the It&rsquo;s 2021: nftables still does not integrate.
 The good: What works compared to 2021? Pretty much everything is still revolving around the iptables-nft compatibility layer, but it has improved a lot so things seem to work just fine now.
 libvirt Everything works. Seems to implicitly use compatibility layer very likely (assuming from libvirt Network Filters).
-Docker Everything works out of the box, without having to write own rules or handle wiring with own Docker event handler.
-</p>
-</div>
-</a>
-<a href=https://blog.zentria.company/posts/flakes-and-little-convenient-impurity-escape-hatch/ class=catalogue-item>
-<div>
-<time datetime="2022-03-20 23:20:00 +0200 +0200" class=catalogue-time>March 20, 2022</time>
-<h2 class=catalogue-title>Flakes and little convenient impurity escape hatch</h2>
-<div class=catalogue-line></div>
-<p>
-Started using flakes recently? But then you found that:
+Docker Everything works out of the box, without having to write own rules or handle wiring with own Docker event handler.</p></div></a><a href=https://blog.zentria.company/posts/flakes-and-little-convenient-impurity-escape-hatch/ class=catalogue-item><div><time datetime="2022-03-20 23:20:00 +0200 +0200" class=catalogue-time>March 20, 2022</time><h2 class=catalogue-title>Flakes and little convenient impurity escape hatch</h2><div class=catalogue-line></div><p>Started using flakes recently? But then you found that:
 You need per-machine configuration for experimentation/secrets (well, e.g firewall config), but don&rsquo;t want to publish them. Your configuration is against your usual quality standards, so it&rsquo;d be shame to show them to the world. Here&rsquo;s one solution to that - works similarly to how current NixOS deployments are still done.
-flake.nix { inputs = { impure-local.url = "path:./impure-local"; impure-local.flake = false; }; outputs = { nixpkgs, impure-local }: { nixosConfigurations.
-</p>
-</div>
-</a>
-<a href=https://blog.zentria.company/posts/container-bind-mount-pitfalls-dns/ class=catalogue-item>
-<div>
-<time datetime="2021-06-06 19:56:22 +0300 +0300" class=catalogue-time>June 6, 2021</time>
-<h2 class=catalogue-title>Container bind mount pitfalls: DNS</h2>
-<div class=catalogue-line></div>
-<p>
-It's not DNS. There's no way it's DNS. It was DNS. Story time? Story time. I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect to a PostgreSQL database and Redis running on the container host, implying no magical DNS solutions nor any convenience at all (manual /24 subnet configuration and firewalling). 1
-</p>
-</div>
-</a>
-<a href=https://blog.zentria.company/posts/its-2021-nftables-still-does-not-integrate/ class=catalogue-item>
-<div>
-<time datetime="2021-05-29 19:25:17 +0300 +0300" class=catalogue-time>May 29, 2021</time>
-<h2 class=catalogue-title>It's 2021: nftables still does not integrate</h2>
-<div class=catalogue-line></div>
-<p>
-You probably have seen it around somewhere already, for example Debian trying hard to replace iptables with it.
+flake.nix { inputs = { impure-local.url = "path:./impure-local"; impure-local.flake = false; }; outputs = { nixpkgs, impure-local }: { nixosConfigurations.</p></div></a><a href=https://blog.zentria.company/posts/container-bind-mount-pitfalls-dns/ class=catalogue-item><div><time datetime="2021-06-06 19:56:22 +0300 +0300" class=catalogue-time>June 6, 2021</time><h2 class=catalogue-title>Container bind mount pitfalls: DNS</h2><div class=catalogue-line></div><p>It's not DNS. There's no way it's DNS. It was DNS. Story time? Story time. I had this very old deployment of Clojure app around, orchestrating quite many Docker containers and their data volumes. It was set up to connect to a PostgreSQL database and Redis running on the container host, implying no magical DNS solutions nor any convenience at all (manual /24 subnet configuration and firewalling). 1
+It also bound whole /var/run into the container to access Docker API socket (it&rsquo;s still sitting at /var/run/docker.</p></div></a><a href=https://blog.zentria.company/posts/its-2021-nftables-still-does-not-integrate/ class=catalogue-item><div><time datetime="2021-05-29 19:25:17 +0300 +0300" class=catalogue-time>May 29, 2021</time><h2 class=catalogue-title>It's 2021: nftables still does not integrate</h2><div class=catalogue-line></div><p>You probably have seen it around somewhere already, for example Debian trying hard to replace iptables with it.
 Debian 10 (buster) shipped with it already, Arch Linux wiki provided (usable) examples for the adventurous back in 2014 etc.
 (nftables is quite promising, don&rsquo;t get me wrong - I quite like it, because how much easier it is to use and integrate. This is rather a rant towards other projects.)
-HOWEVER, integrating it into existing solutions turns out to be VERY painful:
-</p>
-</div>
-</a>
-<a href=https://blog.zentria.company/posts/nixos-cgroupsv2/ class=catalogue-item>
-<div>
-<time datetime="2020-10-24 14:46:00 +0300 +0300" class=catalogue-time>October 24, 2020</time>
-<h2 class=catalogue-title>An adventure of getting Docker on NixOS running only with cgroups v2</h2>
-<div class=catalogue-line></div>
-<p>
-After discovering Linux&rsquo;s wonderful Pressure Stall Information (PSI for short) subsystem, I&rsquo;ve been trying to set up monitoring on Docker containers where I run very memory, CPU and I/O hungry game servers (not hard to guess - it&rsquo;s Minecraft).
+HOWEVER, integrating it into existing solutions turns out to be VERY painful:</p></div></a><a href=https://blog.zentria.company/posts/nixos-cgroupsv2/ class=catalogue-item><div><time datetime="2020-10-24 14:46:00 +0300 +0300" class=catalogue-time>October 24, 2020</time><h2 class=catalogue-title>An adventure of getting Docker on NixOS running only with cgroups v2</h2><div class=catalogue-line></div><p>After discovering Linux&rsquo;s wonderful Pressure Stall Information (PSI for short) subsystem, I&rsquo;ve been trying to set up monitoring on Docker containers where I run very memory, CPU and I/O hungry game servers (not hard to guess - it&rsquo;s Minecraft).
 Since I monitor pretty much everything using Prometheus, then finding Cloudflare&rsquo;s psi_exporter project made my life a lot easier - I didn&rsquo;t have to write an exporter myself.
-Why do cgroups v2 matter?
-</p>
-</div>
-</a>
-</div>
-<div class=pagination>
-<span>1</span>
-</div>
-</main>
-<footer>
-<span>
-&copy; <time datetime="2022-10-20 15:40:59.7070534 +0000 UTC m=+0.067309167">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.
-</span>
-</footer>
-</body>
-</html>
+Why do cgroups v2 matter?</p></div></a></div><div class=pagination><span>1</span></div></main><footer><span>&copy; <time datetime="2022-11-14 19:23:01.62101003 +0000 UTC m=+0.092942025">2022</time> . Made with <a href=https://gohugo.io>Hugo</a> using the <a href=https://github.com/EmielH/tale-hugo/>Tale</a> theme.</span></footer></body></html>
