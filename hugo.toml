@@ -9,7 +9,7 @@ author = { name = "Zentria OÜ", homepage = "https://zentria.company" }
 
 [params.plausible]
 enable = true
-domain = "zentria.company"
+domain = "blog.zentria.company"
 selfhosted_domain = "plausible.zentria.ee"
 hash_based_routing = false
 gitstar = false
