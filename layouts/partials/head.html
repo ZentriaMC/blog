@@ -1,0 +1,37 @@
+<head>
+		<!-- Google Analytics -->
+		{{ template "_internal/google_analytics.html" . }}
+		<!-- Plausible -->
+		{{ partial "plausible_head.html" . }}
+		<!--- OpenGraph metadata -->
+		{{ template "_internal/opengraph.html" . }}
+	
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		{{ template "_internal/opengraph.html" . }}
+		{{- if .IsHome }}
+			<meta name="description" content="{{ .Site.Params.Description }}">
+		{{- else if .Description }}
+			<meta name="description" content="{{ .Description }}">
+		{{- end }}
+
+		<title>{{- if .IsHome }}{{ .Site.Title }}{{- else }}{{ .Title }} &middot; {{ .Site.Title }}{{- end }}</title>
+
+		<!-- CSS -->
+		{{- $inServerMode	:= hugo.IsServer }}
+		{{- $cssTarget		:= "css/style.css" }}
+		{{- $cssOptions		:= cond ($inServerMode) (dict "targetPath" $cssTarget "enableSourceMap" true) (dict "targetPath" $cssTarget "outputStyle" "compressed") }}
+		{{- $style			:= resources.Get "scss/tale.scss" | toCSS $cssOptions }}
+		<link rel="stylesheet" href="{{ $style.RelPermalink }}">
+		<link rel="stylesheet" href="{{ "css/fonts.css" | relURL }}">
+		{{ range .Site.Params.css -}}
+			<link rel="stylesheet" href="{{ . | relURL }}">
+		{{ end -}}
+
+		<!-- Favicon -->
+		<link rel="icon" type="image/png" href="{{ "favicon.png" | relURL }}"/>
+		<link rel="apple-touch-icon" sizes="180x180" href="{{ "favicon.png" | relURL }}">
+
+		<!-- RSS -->
+		<link href="{{ with .OutputFormats.Get "RSS" }}{{ .RelPermalink }}{{ end }}" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
+	</head>

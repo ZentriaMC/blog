@@ -1,0 +1,17 @@
+baseURL = "https://blog.zentria.company/"
+languageCode = "en-us"
+title = "Zentria Blog"
+theme = ["tale", "plausible-hugo"]
+summaryLength = 32
+
+[params]
+author = { name = "Zentria OÜ", homepage = "https://zentria.company" }
+
+[params.plausible]
+enable = true
+domain = "zentria.company"
+selfhosted_domain = "plausible.zentria.ee"
+hash_based_routing = false
+gitstar = false
+outbound_link = true
+file_downloads = true

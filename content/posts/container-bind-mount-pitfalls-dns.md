@@ -3,6 +3,7 @@ title: "Container bind mount pitfalls: DNS"
 author: Mark V.
 date: 2021-06-06T19:56:22+03:00
 draft: false
+summary: "_It's not DNS. There's no way it's DNS. It was DNS._"
 ---
 
 {{< figure src="/img/dns-haiku.png" alt="DNS Haiku" title="It's not DNS. There's no way it's DNS. It was DNS." >}}
